@@ -9,7 +9,7 @@
 import UIKit
 import Parse
 
-class OdemeTalebiVC: UIViewController {
+class OdemeTalebiVC: UIViewController, UITextFieldDelegate {
 
     @IBOutlet weak var txtisimSoyisim: UITextField!
     @IBOutlet weak var txtBankaAdi: UITextField!
@@ -21,6 +21,10 @@ class OdemeTalebiVC: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
+        view.addGestureRecognizer(UITapGestureRecognizer(target: view, action: #selector(UIView.endEditing(_:))))
+
+        txtIban.delegate = self
+        txtCekilecekTutar.delegate = self
         //txtBankaAdi.delegate  = self
         //getBankalar()
     }
@@ -40,7 +44,7 @@ class OdemeTalebiVC: UIViewController {
 
             odemeTalebi.saveInBackground { (success, error) in
                 if error != nil{
-                    self.makeAlert(titleInput: "Error", messageInput: error?.localizedDescription ?? "Talep oluşturma hatası!")
+                    self.makeAlert(titleInput: "Hata", messageInput: error?.localizedDescription ?? "Talep oluşturma hatası!")
                 } else {
                     print("OK")
                     self.dismiss(animated: true, completion: nil)
@@ -48,7 +52,7 @@ class OdemeTalebiVC: UIViewController {
             }
             
         } else {
-            makeAlert(titleInput: "Hata", messageInput: "Banka / IBAN / Tutar ??")
+            makeAlert(titleInput: "Hata", messageInput: "Banka Iban ve Tutar dolu olmalı")
         }
     }
     
@@ -76,6 +80,16 @@ class OdemeTalebiVC: UIViewController {
                 }
             }
         }
+    }
+    
+    func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
+        //For mobile numer validation
+        if textField == txtIban || textField == txtCekilecekTutar {
+            let allowedCharacters = CharacterSet(charactersIn:"+0123456789 ")//Here change this characters based on your requirement
+            let characterSet = CharacterSet(charactersIn: string)
+            return allowedCharacters.isSuperset(of: characterSet)
+        }
+        return true
     }
     
     //func numberOfComponents(in pickerView: UIPickerView) -> Int {

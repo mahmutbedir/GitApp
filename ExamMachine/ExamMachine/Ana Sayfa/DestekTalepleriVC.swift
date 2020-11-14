@@ -26,36 +26,55 @@ class DestekTalepleriVC: UIViewController, UITableViewDelegate, UITableViewDataS
         tableView.delegate = self
         tableView.dataSource = self
         
+        view.addGestureRecognizer(UITapGestureRecognizer(target: view, action: #selector(UIView.endEditing(_:))))
+        
         getTaleplerim()
     }
     
     @IBAction func btnGonderClicked(_ sender: Any) {
-        if txtBaslik.text != "" && txtMesaj.text != "" {
+        if txtBaslik.text != "" || txtMesaj.text != "" {
 
             let destekTalebi = PFObject(className: "DestekTalepleri")
+            
+            
             destekTalebi["UserId"] = PFUser.current()
             destekTalebi["Baslik"] = txtBaslik.text!
             destekTalebi["Mesaj"] = txtMesaj.text!
-            
-            var rnd = randomString(5)
+                
+            let rnd = randomString(5)
             destekTalebi["KayitNo"] = rnd
 
             destekTalebi.saveInBackground { (success, error) in
-                if error != nil{
-                    self.makeAlert(titleInput: "Error", messageInput: error?.localizedDescription ?? "Destek talebi oluşturma hatası!")
-                } else {
-                    self.makeAlert(titleInput: "Talebiniz kaydedildi.", messageInput: "Destek ekibi 48 saat içerisinde yanıtlayacaktır. Bu sürede aynı durum için tekrar kayıt açmayınız.")
-                    self.dismiss(animated: true, completion: nil)
+            if error != nil{
+                self.makeAlert(titleInput: "Hata", messageInput: error?.localizedDescription ?? "Destek talebi oluşturma hatası!")
+            } else {
+                self.makeAlert(titleInput: "Talebiniz kaydedildi.", messageInput: "Destek ekibi 48 saat içerisinde yanıtlayacaktır. Bu sürede aynı durum için tekrar kayıt açmayınız.")
+                    //self.dismiss(animated: true, completion: nil)
                 }
             }
-            
         } else {
-            makeAlert(titleInput: "Hata", messageInput: "Başlık / Mesaj ??")
+            makeAlert(titleInput: "Hata", messageInput: "Başlık ve Mesaj dolu olmalı")
         }
-        tableView.reloadData()
+        getTaleplerim()
     }
     
     @IBAction func btnSikSorulanMesajlar(_ sender: Any) {
+        var konu_ = "SikSorulanSorularLinki"
+        let query = PFQuery(className: "Ayarlar")
+        query.whereKey("Konu", equalTo: konu_)
+        query.findObjectsInBackground { (objects, error) in
+                if error != nil {
+
+                } else {
+                    
+                    for object in objects! {
+                        if let link_ = object.object(forKey: "Link") as? String {
+                            guard let url = URL(string: link_) else { return }
+                            UIApplication.shared.open(url)
+                    }
+                }
+            }
+        }
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {

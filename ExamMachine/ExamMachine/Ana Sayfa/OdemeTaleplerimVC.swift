@@ -13,6 +13,7 @@ class OdemeTaleplerimVC: UIViewController, UITableViewDelegate, UITableViewDataS
 
     var odemeTalebiBanka_Tutar = [String]()
     var odemeTalebiIban = [String]()
+    var odemeDurumu = [String]()
     
     @IBOutlet weak var tableView: UITableView!
     
@@ -29,19 +30,24 @@ class OdemeTaleplerimVC: UIViewController, UITableViewDelegate, UITableViewDataS
         let currentUser = PFUser.current()
         let query = PFQuery(className: "OdemeTalepleri")
         query.whereKey("UserId", equalTo: currentUser)
+        query.addDescendingOrder("createdAt")
         query.findObjectsInBackground { (objects, error) in
                 if error != nil {
 
                 } else {
                     self.odemeTalebiBanka_Tutar.removeAll(keepingCapacity: false)
                     self.odemeTalebiIban.removeAll(keepingCapacity: false)
+                    self.odemeDurumu.removeAll(keepingCapacity: false)
                     
                     for object in objects! {
                         if let banka = object.object(forKey: "BankaAdi") as? String {
                             if let tutar = object.object(forKey: "Tutar") as? String {
                                 if let KayitNo = object.object(forKey: "KayitNo") as? String {
-                                    self.odemeTalebiBanka_Tutar.append(KayitNo + " | " + banka + " | " + tutar + "₺")
-                                    self.odemeTalebiIban.append(KayitNo)
+                                    if let Durum = object.object(forKey: "Durum") as? String {
+                                        self.odemeTalebiBanka_Tutar.append(KayitNo + " | " + Durum + " | " + banka + " | " + tutar + "₺")
+                                        self.odemeTalebiIban.append(KayitNo)
+                                        self.odemeDurumu.append(Durum)
+                                    }
                                 }
                             }
                         }
@@ -61,6 +67,14 @@ class OdemeTaleplerimVC: UIViewController, UITableViewDelegate, UITableViewDataS
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = UITableViewCell()
         cell.textLabel?.text = odemeTalebiBanka_Tutar[indexPath.row]
+        cell.textLabel?.textColor = UIColor.white
+        if odemeDurumu[indexPath.row] == "Ödendi" {
+            cell.contentView.backgroundColor = UIColor.systemGreen
+        } else if odemeDurumu[indexPath.row] == "Beklemede" {
+            cell.contentView.backgroundColor = UIColor.systemYellow
+        } else if odemeDurumu[indexPath.row] == "Ret" {
+            cell.contentView.backgroundColor = UIColor.systemRed
+        }
         return cell
     }
 

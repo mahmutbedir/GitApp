@@ -16,22 +16,35 @@ class YardimAlVC: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        
+        view.addGestureRecognizer(UITapGestureRecognizer(target: view, action: #selector(UIView.endEditing(_:))))
     }
 
     @IBAction func btnSifremiUnuttumClicked(_ sender: Any) {
         if txtEmail.text != "" {
-            PFUser.requestPasswordResetForEmail(inBackground: txtEmail.text!) { (success, error) in
-                if error != nil {
-                    self.makeAlert(titleInput: "Hata", messageInput: error?.localizedDescription ?? "Şifre sıfırlama hatası")
-                } else {
-                    self.makeAlert(titleInput: "Başarılı", messageInput: "Sıfırlama emaili gönderildi.")
+            let validmi = isValidEmail(txtEmail.text!)
+            if validmi == true {
+                PFUser.requestPasswordResetForEmail(inBackground: txtEmail.text!) { (success, error) in
+                    if error != nil {
+                        self.makeAlert(titleInput: "Hata", messageInput: error?.localizedDescription ?? "Şifre sıfırlama hatası")
+                    } else {
+                        self.makeAlert(titleInput: "Başarılı", messageInput: "Sıfırlama emaili gönderildi.")
+                    }
                 }
+            } else {
+                makeAlert(titleInput: "Hata", messageInput: "Email hatalı!")
             }
+
         } else {
-            makeAlert(titleInput: "Hata", messageInput: "Email ?")
+            makeAlert(titleInput: "Hata", messageInput: "Email dolu olmalı")
         }
 
+    }
+    
+    func isValidEmail(_ email: String) -> Bool {
+        let emailRegEx = "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}"
+
+        let emailPred = NSPredicate(format:"SELF MATCHES %@", emailRegEx)
+        return emailPred.evaluate(with: email)
     }
     
     @IBAction func btnGirisYapClicked(_ sender: Any) {

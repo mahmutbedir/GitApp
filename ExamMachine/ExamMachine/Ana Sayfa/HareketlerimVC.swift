@@ -15,9 +15,11 @@ class HareketlerimVC: UIViewController, UITableViewDelegate, UITableViewDataSour
     @IBOutlet weak var tableView: UITableView!
     
     var AktiviteId = [String]()
+    var SoruMetni = [String]()
     var DogruCevap = [String]()
     var UserCevap = [String]()
     var Toplu = [String]()
+    var bilmisMi = [String]()
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -32,6 +34,7 @@ class HareketlerimVC: UIViewController, UITableViewDelegate, UITableViewDataSour
         let currentUser = PFUser.current()
         let query = PFQuery(className: "SoruAktiviteleri")
         query.whereKey("UserId", equalTo: currentUser)
+        query.addDescendingOrder("createdAt")
         query.findObjectsInBackground { (objects, error) in
                 if error != nil {
 
@@ -44,7 +47,13 @@ class HareketlerimVC: UIViewController, UITableViewDelegate, UITableViewDataSour
                         if let AktiviteId_ = object.objectId as? String {
                             if let DogruCevap_ = object.object(forKey: "DogruCevap") as? String {
                                 if let UserCevap_ = object.object(forKey: "UserCevap") as? String {
-                                    self.Toplu.append("Id: " + AktiviteId_ + " | Doğru C.: " + DogruCevap_ + " | Cevabın:" + UserCevap_)
+                                    self.Toplu.append("Id: " + AktiviteId_ + " | Doğru : " + DogruCevap_ + " | Cevabın:" + UserCevap_)
+                                    if DogruCevap_ == UserCevap_ {
+                                        self.bilmisMi.append("Evet")
+                                    } else {
+                                        self.bilmisMi.append("Hayir")
+                                    }
+                                    
                                 }
                             }
                         }
@@ -64,11 +73,21 @@ class HareketlerimVC: UIViewController, UITableViewDelegate, UITableViewDataSour
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = UITableViewCell()
         cell.textLabel?.text = Toplu[indexPath.row]
+        cell.textLabel?.textColor = UIColor.white
+        if bilmisMi[indexPath.row] == "Evet" {
+            cell.contentView.backgroundColor = UIColor.systemGreen
+        } else {
+            cell.contentView.backgroundColor = UIColor.systemRed
+        }
         return cell
     }
 
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return Toplu.count
+    }
+    
+    func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
+        return "Geçmiş Sorularım"
     }
 
 }

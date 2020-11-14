@@ -18,11 +18,29 @@ class AyarlarViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        interstitial = GADInterstitial(adUnitID: "ca-app-pub-3940256099942544/4411468910")
-        let request = GADRequest()
-        interstitial.load(request)
+        //interstitial = GADInterstitial(adUnitID: "ca-app-pub-3940256099942544/4411468910")
+        //let request = GADRequest()
+        //interstitial.load(request)
         
         uiSwitch.addTarget(self, action: #selector(switchChanged), for: .valueChanged)
+    }
+    
+    @IBAction func btnYarismaKurallariClicked(_ sender: Any) {
+        let any = "YarismaKurallari"
+        let query = PFQuery(className: "Ayarlar")
+        query.whereKey("Konu", equalTo: any)
+        query.findObjectsInBackground { (objects, error) in
+            if error != nil {
+                self.makeAlert(titleInput: "Hata", messageInput: "Ayarlar yüklenirken hata oluştu.")
+            } else {
+                for object in objects! {
+                    if let metin = object.object(forKey: "Metin") as? String {
+                        self.makeAlert(titleInput: "Yarışma Kuralları", messageInput: metin)
+                    }
+
+                }
+            }
+        }
     }
     
     @objc func switchChanged(mySwitch : UISwitch){
@@ -66,11 +84,11 @@ class AyarlarViewController: UIViewController {
     }
     
     @IBAction func btnSoruEkle(_ sender: Any) {
-        if interstitial.isReady {
-          interstitial.present(fromRootViewController: self)
-        } else {
-          print("Ad wasn't ready")
-        }
+        //if interstitial.isReady {
+        //  interstitial.present(fromRootViewController: self)
+        //} else {
+        //  print("Ad wasn't ready")
+        //}
 
         performSegue(withIdentifier: "toSoruEkle", sender: nil)
     }
@@ -78,6 +96,10 @@ class AyarlarViewController: UIViewController {
     @IBAction func bildirimlerChanged(_ sender: Any) {
         
     }
+    
+    @IBAction func btnReflerGuncelleClicked(_ sender: Any) {
+    }
+    
     
     func makeAlert(titleInput : String, messageInput: String) {
         let alert = UIAlertController(title: titleInput, message: messageInput, preferredStyle: .alert)

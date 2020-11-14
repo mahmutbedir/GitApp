@@ -21,31 +21,54 @@ class SoruDetayViewController: UIViewController, GADRewardBasedVideoAdDelegate {
     @IBOutlet weak var btnC: UIButton!
     @IBOutlet weak var btnD: UIButton!
     @IBOutlet weak var txtSoru: UITextView!
+    @IBOutlet weak var lblTimer: UILabel!
+    
+    @IBOutlet weak var lblCurrency: UILabel!
     
     var secilenSoruId = ""
     var dogruCevap = ""
     var hakedisXP = 0.00
     var hakedisTL = 0.00
     
+    
     let user = PFUser.current()
+    
+    var counter = 20
+    
+    weak var timer: Timer?
+    
+    var activityind : UIActivityIndicatorView = UIActivityIndicatorView()
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        GADRewardBasedVideoAd.sharedInstance().load(GADRequest(), withAdUnitID: "ca-app-pub-3940256099942544/1712485313")
-
-        GADRewardBasedVideoAd.sharedInstance().delegate = self
-        
+        activityIndCagir()
+        //self.view.backgroundColor = UIColor(patternImage: UIImage(named: "Back.png")!)
         getDataFromSorular()
         
-        interstitial = GADInterstitial(adUnitID: "ca-app-pub-3940256099942544/4411468910") //Yayınlamadn önce değiştir
-        let request = GADRequest()
-        interstitial.load(request)
+        
+        GADRewardBasedVideoAd.sharedInstance().delegate = self
+
+        GADRewardBasedVideoAd.sharedInstance().load(GADRequest(), withAdUnitID: "ca-app-pub-6070716528243368/4729133255")
+
+
+        
+        timer = Timer.scheduledTimer(timeInterval: 1.0, target: self, selector: #selector(updateCounter), userInfo: nil, repeats: true)
+
+        
+        //interstitial = GADInterstitial(adUnitID: "ca-app-pub-3940256099942544/4411468910") //Yayınlamadn önce değiştir
+        //let request = GADRequest()
+        //interstitial.load(request)
+        txtSoru.backgroundColor = UIColor.white
 
     }
     
     func reloadd(){
         NotificationCenter.default.post(name: NSNotification.Name(rawValue: "newDataNotif"), object: nil)
+    }
+    
+    func userGuncelleSelector(){
+        NotificationCenter.default.post(name: NSNotification.Name(rawValue: "getUserBilgilerSelector"), object: nil)
     }
     
     func getDataFromSorular() {
@@ -89,21 +112,29 @@ class SoruDetayViewController: UIViewController, GADRewardBasedVideoAdDelegate {
                     if let D = secilisoruobject.object(forKey: "D") as? String {
                         self.btnD.setTitle("D : \(D)", for: .normal)
                     }
+                    self.activityind.stopAnimating()
                 }
             }
         }
     }
     
     func rewardBasedVideoAdDidClose(_ rewardBasedVideoAd: GADRewardBasedVideoAd) {
-         GADRewardBasedVideoAd.sharedInstance().load(GADRequest(), withAdUnitID: "ca-app-pub-3940256099942544/1712485313")
+         
+        //GADRewardBasedVideoAd.sharedInstance().load(GADRequest(), withAdUnitID: "ca-app-pub-3940256099942544/1712485313")  // TEST
+        GADRewardBasedVideoAd.sharedInstance().load(GADRequest(), withAdUnitID: "ca-app-pub-6070716528243368/4729133255")
+
+        self.dismiss(animated: false, completion: nil)
+        self.reloadd()
+        
      }
 
      
 
      func rewardBasedVideoAd(_ rewardBasedVideoAd: GADRewardBasedVideoAd, didRewardUserWith reward: GADAdReward) {
         currency += 100
-        makeAlert(titleInput: String(currency), messageInput: String(currency))
-    }
+        //lblCurrency.text = String("\(hakedisXP) XP | \(hakedisTL) TL" )
+        useraPuanEkle(xp: hakedisXP, kazanc: hakedisTL)
+     }
     
     @IBAction func AClicked(_ sender: Any) {
         if dogruCevap == "A" {
@@ -145,10 +176,26 @@ class SoruDetayViewController: UIViewController, GADRewardBasedVideoAdDelegate {
     }
     
     func makeAlert(titleInput : String, messageInput: String) {
+        stopTimer()
         let alert = UIAlertController(title: titleInput, message: messageInput, preferredStyle: .alert)
         //let okButton = UIAlertAction(title: "OK", style: .default, handler: nil)
-        alert.addAction(UIAlertAction(title: "Kaydet", style: .default, handler: { (action) in
-            self.reklamIzleIkili()
+        alert.addAction(UIAlertAction(title: "OK", style: .default, handler: { (action) in
+            
+            if titleInput == "Tebrikler!"{
+                self.reklamGelsin()
+            } else if titleInput == "Bir hata oluştu!" {
+                return
+            } else if titleInput == "Süre doldu" {
+                self.dismiss(animated: false, completion: nil)
+                self.reloadd()
+            }
+            else {
+                self.dismiss(animated: false, completion: nil)
+                self.reloadd()
+            }
+            //self.dismiss(animated: false, completion: nil)
+            
+            //self.reloadd()
         }))
 
         self.present(alert, animated: true, completion: nil)
@@ -169,24 +216,31 @@ class SoruDetayViewController: UIViewController, GADRewardBasedVideoAdDelegate {
         object["DogruCevap"] = dogruCevap
         object["HakedisXP"] = hakedisXP
         object["HakedisTL"] = hakedisTL
-        
+        object["RefKodu"] = PFUser.current()!["Referansim"]
         object.saveInBackground { (success, error) in
             if error != nil {
                 
             } else {
                 print("Success")
-                self.useraPuanEkle(xp: self.hakedisXP, kazanc: self.hakedisTL)
-                //self.getUserBilgileri()
-                self.reloadd()
-                //self.tabBarController?.selectedIndex = 1
+                
+                //self.reloadd()
             }
         }
     }
     
     func useraPuanEkle(xp: Double, kazanc: Double){
         let user = PFUser.current()
-        user?.incrementKey("Bakiye", byAmount: NSNumber(value : kazanc))
-        user?.incrementKey("XP", byAmount: NSNumber(value : xp))
+        user?.incrementKey("Bakiye", byAmount: NSNumber(value : hakedisTL))
+        user?.incrementKey("XP", byAmount: NSNumber(value : hakedisXP))
+        user?.incrementKey("Enerji", byAmount: -1.00)
+        user?.saveInBackground(block: { (success, error) in
+            if error != nil {
+                print(error?.localizedDescription ?? "Hata")
+            } else {
+                print("Başarılı")
+                self.userGuncelleSelector()
+            }
+        })
     }
     
     func getUserBilgileri(){
@@ -212,18 +266,20 @@ class SoruDetayViewController: UIViewController, GADRewardBasedVideoAdDelegate {
         sleep(5)
         reklamGelsin()
     }
-    
-    func reklamIzleIkili(){
-        reklamGelsin()
-        sleep(5)
-        reklamGelsin()
 
-    }
-    
     func reklamGelsin() {
         if GADRewardBasedVideoAd.sharedInstance().isReady == true {
               GADRewardBasedVideoAd.sharedInstance().present(fromRootViewController: self)
-          }
+        } else {
+            makeAlert(titleInput: "Bir hata oluştu!", messageInput: "Tekrar çözebilir misiniz?")
+            return
+        }
+    }
+    
+    func reklamGelsinIkili(){
+        reklamGelsin()
+        sleep(5)
+        reklamGelsin()
     }
     
     func acilanPageiGizle(){
@@ -248,24 +304,51 @@ class SoruDetayViewController: UIViewController, GADRewardBasedVideoAdDelegate {
     
     /// Tells the delegate that the user earned a reward.
     func rewardedAd(_ rewardedAd: GADRewardedAd, userDidEarn reward: GADAdReward) {
-      print("Reward received with currency: \(reward.type), amount \(reward.amount).")
-        makeAlert(titleInput: reward.type, messageInput: "\(reward.amount).")
-        acilanPageiGizle()
+      currency += 100
+        lblCurrency.text = String(currency)
     }
+    
     /// Tells the delegate that the rewarded ad was presented.
     func rewardedAdDidPresent(_ rewardedAd: GADRewardedAd) {
       print("Rewarded ad presented.")
-       makeAlert(titleInput: "Rewarded ad presented", messageInput: "Rewarded ad presented")
     }
     /// Tells the delegate that the rewarded ad was dismissed.
     func rewardedAdDidDismiss(_ rewardedAd: GADRewardedAd) {
-      print("Rewarded ad dismissed.")
-        makeAlert(titleInput: "Rewarded ad dismissed.", messageInput: "Rewarded ad dismissed.")
+        GADRewardBasedVideoAd.sharedInstance().load(GADRequest(), withAdUnitID: "ca-app-pub-6070716528243368/4729133255")
     }
     /// Tells the delegate that the rewarded ad failed to present.
     func rewardedAd(_ rewardedAd: GADRewardedAd, didFailToPresentWithError error: Error) {
       print("Rewarded ad failed to present.")
-        makeAlert(titleInput: "Rewarded ad failed to present.", messageInput: "Rewarded ad failed to present.")
+    }
+    
+    @objc func updateCounter() {
+        
+        
+        if counter > 0 {
+            //print("\(counter) seconds to the end of the world")
+            lblTimer.text = String(counter)
+            counter -= 1
+        } else {
+            lblTimer.text = "Süre doldu."
+            stopTimer()
+            makeAlert(titleInput: "Süre doldu", messageInput: "Daha hızlı olmalısın")
+        }
+    }
+
+    func stopTimer() {
+        timer?.invalidate()
+    }
+    deinit {
+        stopTimer()
+    }
+    
+    func activityIndCagir(){
+        activityind.center = self.view.center
+        activityind.hidesWhenStopped = true
+        activityind.style = UIActivityIndicatorView.Style.large
+        activityind.color = UIColor.black
+        self.view.addSubview(activityind)
+        activityind.startAnimating()
     }
     
 }

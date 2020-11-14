@@ -5,13 +5,14 @@
 //  Created by Mac on 23.09.2020.
 //  Copyright © 2020 Mac. All rights reserved.
 //
-
+import CommonCrypto
 import UIKit
 import Parse
 
 class KayitOlViewController: UIViewController, UITextFieldDelegate {
 
     
+    @IBOutlet weak var txtUserName: UITextField!
     @IBOutlet weak var txtAdSoyad: UITextField!
     @IBOutlet weak var txtEmail: UITextField!
     @IBOutlet weak var txtTel: UITextField!
@@ -20,24 +21,39 @@ class KayitOlViewController: UIViewController, UITextFieldDelegate {
     @IBOutlet weak var txtReferans: UITextField!
     @IBOutlet weak var segCinsiyet: UISegmentedControl!
     
+    var activityind : UIActivityIndicatorView = UIActivityIndicatorView()
+    
     var refKodu = ""
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        
+        
+        view.addGestureRecognizer(UITapGestureRecognizer(target: view, action: #selector(UIView.endEditing(_:))))
 
         txtTel.delegate = self
+        txtUserName.delegate = self
     }
     @IBAction func btnKayitOlClicked(_ sender: Any) {
         
-        if txtEmail.text != "" && txtPass.text != "" && txtAdSoyad.text != "" && txtPassTekrar.text != "" {
-
+        if txtUserName.text != "" && txtEmail.text != "" && txtPass.text != "" && txtAdSoyad.text != "" && txtPassTekrar.text != "" && txtTel.text != "" {
+            
             let user = PFUser()
             user.email = txtEmail.text!
-            user.username = txtAdSoyad.text!
+            user["AdSoyad"] = txtAdSoyad.text!
+            user.username = txtUserName.text!
             
-            if (txtPass.text?.count ?? 0 < 6 && txtPassTekrar.text?.count ?? 0 < 6) {
+            if (txtPass.text!.count < 6 && txtPassTekrar.text!.count < 6) {
                 makeAlert(titleInput: "Hata", messageInput: "Şifre uzunluğu en az 6 karakter olmalı!")
                 return
+            }
+            
+            if txtTel.text!.count != 17 {
+                makeAlert(titleInput: "Hata", messageInput: "Telefon numarasını hatalı girdiniz!")
+                return
+            } else {
+                user["Telefon"] = txtTel.text!
             }
             
             if txtPass.text != txtPassTekrar.text {
@@ -45,26 +61,48 @@ class KayitOlViewController: UIViewController, UITextFieldDelegate {
                 return
             } else {
                 user.password = txtPass.text!
-            }
-            if let ref = txtReferans.text {
-                user["Referansim"] = ref
-                refKodu = ref
-            }
-            if segCinsiyet.selectedSegmentIndex == 0 {
-                user["Cinsiyet"] = 0
-            } else {
-                user["Cinsiyet"] = 1
+                user["PW"] = txtPass.text!
             }
             
-            var rnd = randomString(8)
+            user["DeviceID"] = UIDevice.current.identifierForVendor!.uuidString
+            user["CihazTipi"] = "iOS"
+
+            
+            if txtReferans.text != "" {
+                if let ref = txtReferans.text {
+                    if txtReferans.text!.count != 6 {
+                        makeAlert(titleInput: "Hata", messageInput: "Referans kodu uzunluğu 6 karakter olmalı!")
+                        return
+                    } else {
+                        user["Referansim"] = ref
+                        refKodu = ref
+                    }
+                }
+            }
+
+            
+            if segCinsiyet.selectedSegmentIndex == 0 {
+                user["Cinsiyet"] = 0
+            } else if segCinsiyet.selectedSegmentIndex == 1 {
+                user["Cinsiyet"] = 1
+            } else if segCinsiyet.selectedSegmentIndex == 2 {
+                user["Cinsiyet"] = 2
+            }
+            
+            var rnd = randomString(6)
             user["ReferansKodum"] = rnd
             
             
-            
+            self.activityIndCagir()
             user.signUpInBackground { (success, error) in
                 if error != nil{
-                    self.makeAlert(titleInput: "Error", messageInput: error?.localizedDescription ?? "Error!")
+                    if error?.localizedDescription == "Account already exists for this email address." {
+                        self.makeAlert(titleInput: "Hata", messageInput: "Bu email adresi zaten kayıtlıdır.")
+                    } else {
+                        self.makeAlert(titleInput: "Hata", messageInput: error?.localizedDescription ?? "Kayıt olma hatası!")
+                    }
                 } else {
+                    self.activityind.stopAnimating()
                     print("OK")
                     self.referansiArtir()
                     self.performSegue(withIdentifier: "toFeedVC", sender: nil)
@@ -72,7 +110,7 @@ class KayitOlViewController: UIViewController, UITextFieldDelegate {
             }
             
         } else {
-            makeAlert(titleInput: "Error", messageInput: "Ad Soyad / Email / Şifre ??")
+            makeAlert(titleInput: "Hata", messageInput: "Ad Soyad / Email / Şifre / Kullanıcı Adı dolu olmalı!")
         }
         
     }
@@ -85,29 +123,7 @@ class KayitOlViewController: UIViewController, UITextFieldDelegate {
     }
     
     func referansiArtir() {
-        
-        let query = PFQuery(className: "_User")
-        query.whereKey("ReferansKodum", equalTo: String(refKodu) )
-        
-        query.findObjectsInBackground { (objects, error) in
-            if error != nil {
 
-            } else {
-                for object in objects! {
-                    var us = (object) as! PFUser
-                    us.objectId = object.objectId
-                    us.incrementKey("ReferansSayim", byAmount: NSNumber(value : 1.00))
-                    us.saveInBackground { (success, error) in
-                        if error != nil {
-                            self.makeAlert(titleInput: "Error", messageInput: error?.localizedDescription ?? "Hata Kodu 2000")
-                        } else {
-                            print("success")
-                        }
-                    }
-                }
-
-            }
-        }
     }
     
     @IBAction func btnGirisYapClicked(_ sender: Any) {
@@ -129,11 +145,68 @@ class KayitOlViewController: UIViewController, UITextFieldDelegate {
     func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
         //For mobile numer validation
         if textField == txtTel {
-            let allowedCharacters = CharacterSet(charactersIn:"+0123456789 ")//Here change this characters based on your requirement
+            guard let text = textField.text else { return false }
+            let newString = (text as NSString).replacingCharacters(in: range, with: string)
+            textField.text = format(with: "X (XXX) XXX XX XX", phone: newString)
+            return false
+        }
+        
+        if textField == txtUserName {
+            let allowedCharacters = CharacterSet(charactersIn:"0123456789qwertyuopasdfghjklizxcvbnm_QWERTYUOPASDFGHJKLIZXCVBNM")//Here change this characters based on your requirement
             let characterSet = CharacterSet(charactersIn: string)
             return allowedCharacters.isSuperset(of: characterSet)
         }
         return true
+    }
+    
+    func format(with mask: String, phone: String) -> String {
+        let numbers = phone.replacingOccurrences(of: "[^0-9]", with: "", options: .regularExpression)
+        var result = ""
+        var index = numbers.startIndex // numbers iterator
+
+        // iterate over the mask characters until the iterator of numbers ends
+        for ch in mask where index < numbers.endIndex {
+            if ch == "X" {
+                // mask requires a number in this place, so take the next one
+                result.append(numbers[index])
+
+                // move numbers iterator to the next index
+                index = numbers.index(after: index)
+
+            } else {
+                result.append(ch) // just append a mask character
+            }
+        }
+        return result
+    }
+    
+    func activityIndCagir(){
+        activityind.center = self.view.center
+        activityind.hidesWhenStopped = true
+        activityind.style = UIActivityIndicatorView.Style.large
+        activityind.color = UIColor.black
+        self.view.addSubview(activityind)
+        activityind.startAnimating()
+    
+    }
+    
+    func sha256(_ data: Data) -> Data? {
+        guard let res = NSMutableData(length: Int(CC_SHA256_DIGEST_LENGTH)) else { return nil }
+        CC_SHA256((data as NSData).bytes, CC_LONG(data.count), res.mutableBytes.assumingMemoryBound(to: UInt8.self))
+        return res as Data
+    }
+    
+    func sha256(_ str: String) -> String? {
+        guard
+            let data = str.data(using: String.Encoding.utf8),
+            let shaData = sha256(data)
+            else { return nil }
+        let rc = shaData.base64EncodedString(options: [])
+        return rc
+    }
+    
+    func SifreleBakalim() {
+        
     }
     
 }

@@ -16,23 +16,28 @@ class GirisYapViewController: UIViewController {
     @IBOutlet weak var btnGirisYap: UIButton!
     @IBOutlet weak var btnKayitOl_: UIButton!
     
+    var activityind : UIActivityIndicatorView = UIActivityIndicatorView()
+    
     override func viewDidLoad() {
         super.viewDidLoad()
-        
+        view.addGestureRecognizer(UITapGestureRecognizer(target: view, action: #selector(UIView.endEditing(_:))))
+
     }
     @IBAction func GirisYapClicked(_ sender: Any) {
         
         if txtEmail.text != "" && txtPass.text != "" {
+            self.activityIndCagir()
             PFUser.logInWithUsername(inBackground: txtEmail.text!, password: txtPass.text!) { (user, error) in
                 if error != nil {
-                    self.makeAlert(titleInput: "Error", messageInput: error?.localizedDescription ?? "Error!")
+                    self.makeAlert(titleInput: "Hata", messageInput: error?.localizedDescription ?? "Giriş yapılamadı!")
                 } else {
+                    self.activityind.stopAnimating()
                     print("OK")
                     self.performSegue(withIdentifier: "toTabBarController", sender: nil)
                 }
             }
         } else {
-            makeAlert(titleInput: "Error", messageInput: "Email / Şifre ??")
+            makeAlert(titleInput: "Hata", messageInput: "Email ve Şifre dolu olmalı")
         }
     }
     @IBAction func KayitOlClicked(_ sender: Any) {
@@ -49,4 +54,13 @@ class GirisYapViewController: UIViewController {
         self.present(alert, animated: true, completion: nil)
     }
     
+    func activityIndCagir(){
+        activityind.center = self.view.center
+        activityind.hidesWhenStopped = true
+        activityind.style = UIActivityIndicatorView.Style.large
+        activityind.color = UIColor.black
+        self.view.addSubview(activityind)
+        activityind.startAnimating()
+    }
+
 }

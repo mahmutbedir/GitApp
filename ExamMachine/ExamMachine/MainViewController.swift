@@ -18,10 +18,16 @@ class MainViewController: UIViewController, UITableViewDelegate, UITableViewData
     @IBOutlet weak var imgResim: UIImageView!
     @IBOutlet weak var lblBakiye: UILabel!
     @IBOutlet weak var lblXP: UILabel!
+    @IBOutlet weak var lblEnerji: UILabel!
     
+    var bilgiID = [String]()
     var bilgiBaslik = [String]()
     var bilgiAciklama = [String]()
     var bilgiGorsel = [String]()
+    var yonlendirmeMi = [Bool]()
+    var link = [String]()
+    
+    var selectedBilgilendirme = ""
 
     
     override func viewDidLoad() {
@@ -33,9 +39,12 @@ class MainViewController: UIViewController, UITableViewDelegate, UITableViewData
         getUserBilgileri()
         getBilgilendirmelerFromParse()
         
+        NotificationCenter.default.addObserver(self, selector: #selector(self.getUserBilgilerSelector), name: NSNotification.Name(rawValue: "getUserBilgilerSelector"), object: nil)
     }
     
-    
+    @objc func getUserBilgilerSelector() {
+        getUserBilgileri()
+   }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = UITableViewCell()
@@ -70,13 +79,18 @@ class MainViewController: UIViewController, UITableViewDelegate, UITableViewData
                     if let bakiye = object.object(forKey: "Bakiye") as? Double {
                         self.lblBakiye.text = String(format: "%.2f", bakiye) + " ₺"
                     }
+                    if let enerji_ = object.object(forKey: "Enerji") as? Double {
+                        self.lblEnerji.text = String(format: "%.0f", enerji_)
+                    }
                 }
             }
         }
     }
-    
+        
     func getBilgilendirmelerFromParse() {
+        let aktifmi = true
         let query = PFQuery(className: "Bilgilendirmeler")
+        query.whereKey("Aktifmi", equalTo: aktifmi)
         query.findObjectsInBackground { (objects, error) in
             if error != nil {
                 self.makeAlert(titleInput: "Error", messageInput: error?.localizedDescription ?? "Bilgilendirme hatası")
@@ -86,10 +100,19 @@ class MainViewController: UIViewController, UITableViewDelegate, UITableViewData
                 
                 for object in objects! {
                     if let basName = object.object(forKey: "Baslik") as? String {
-                        if let bilgiId = object.objectId as? String {
-                            self.bilgiBaslik.append(basName)
-                            self.bilgiAciklama.append(bilgiId)
-                        }
+                        self.bilgiBaslik.append(basName)
+                    }
+                    if let bilgiId = object.objectId as? String {
+                        self.bilgiID.append(bilgiId)
+                    }
+                    if let yonledirmemi_ = object.object(forKey: "YonlendirmeMi") as? Bool {
+                        self.yonlendirmeMi.append(yonledirmemi_)
+                    }
+                    if let basName = object.object(forKey: "Aciklama") as? String {
+                        self.bilgiAciklama.append(basName)
+                    }
+                    if let link_ = object.object(forKey: "Link") as? String {
+                        self.link.append(link_)
                     }
                 }
                 self.tableView.reloadData()
@@ -97,13 +120,25 @@ class MainViewController: UIViewController, UITableViewDelegate, UITableViewData
         }
     }
     
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        selectedBilgilendirme = bilgiAciklama[indexPath.row]
+        if yonlendirmeMi[indexPath.row] == true {
+            guard let url = URL(string: link[indexPath.row]) else { return }
+            UIApplication.shared.open(url)
+        } else {
+            makeAlert(titleInput: bilgiBaslik[indexPath.row], messageInput: bilgiAciklama[indexPath.row])
+        }
+    }
+    
     func makeAlert(titleInput : String, messageInput: String) {
         let alert = UIAlertController(title: titleInput, message: messageInput, preferredStyle: .alert)
         let okButton = UIAlertAction(title: "OK", style: .default, handler: nil)
         alert.addAction(okButton)
+        self.present(alert, animated: true, completion: nil)
     }
     
     @IBAction func btnVerileriGuncelleClick(_ sender: Any) {
+        makeAlert(titleInput: "Başarılı", messageInput: "Veriler güncellendi.")
         viewDidLoad()
     }
     
@@ -125,5 +160,8 @@ class MainViewController: UIViewController, UITableViewDelegate, UITableViewData
     
     @IBAction func btnGecmisSorular(_ sender: Any) {
         performSegue(withIdentifier: "toHareketlerim", sender: nil)
+    }
+    @IBAction func btnProfilClicked(_ sender: Any) {
+        tabBarController?.selectedIndex = 2
     }
 }

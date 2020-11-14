@@ -24,6 +24,8 @@ class SoruKaydetViewController: UIViewController, UITextFieldDelegate, UITextVie
     override func viewDidLoad() {
         super.viewDidLoad()
 
+        view.addGestureRecognizer(UITapGestureRecognizer(target: view, action: #selector(UIView.endEditing(_:))))
+
         lblXP.delegate = self
         lblKurus.delegate = self
         txtViewSoru.delegate = self
@@ -51,8 +53,8 @@ class SoruKaydetViewController: UIViewController, UITextFieldDelegate, UITextVie
                 object["Soru"] = txtViewSoru.text!
             }
             
-            if (txtA.text!.count > 50 || txtB.text!.count > 50 || txtC.text!.count > 50 || txtD.text!.count > 50) {
-                makeAlert(titleInput: "Error", messageInput: "Cevap karakter sayısı 50 karakteri geçmemeli!")
+            if (txtA.text!.count > 30 || txtB.text!.count > 30 || txtC.text!.count > 30 || txtD.text!.count > 30) {
+                makeAlert(titleInput: "Error", messageInput: "Cevap karakter sayısı 30 karakteri geçmemeli!")
                 return
             } else {
                 object["A"] = txtA.text!
@@ -68,7 +70,13 @@ class SoruKaydetViewController: UIViewController, UITextFieldDelegate, UITextVie
                 self.makeAlert(titleInput: "Hata", messageInput: "Yanıt olarak A/B/C/D seçilmeli!")
                 return
             } else {
-                object["DogruCevap"] = txtDogruCevap.text!
+                if txtDogruCevap.text! == "a" { object["DogruCevap"] = "A" }
+                else if txtDogruCevap.text! == "b" { object["DogruCevap"] = "B" }
+                else if txtDogruCevap.text! == "c" { object["DogruCevap"] = "C" }
+                else if txtDogruCevap.text! == "d" { object["DogruCevap"] = "D" }
+                else {
+                    object["DogruCevap"] = txtDogruCevap.text!
+                }
             }
             
             let kurus:Int? = Int(lblKurus.text!)
@@ -78,6 +86,8 @@ class SoruKaydetViewController: UIViewController, UITextFieldDelegate, UITextVie
             } else {
                 object["Kazanc"] = Double(lblKurus.text!)! / 100
             }
+            
+            object["UserId"] = PFUser.current()
             
             object.saveInBackground { (success, error) in
                 if error != nil {
@@ -120,5 +130,6 @@ class SoruKaydetViewController: UIViewController, UITextFieldDelegate, UITextVie
         lblXP.text = ""
         lblKurus.text = ""
     }
+    
     
 }

@@ -26,9 +26,13 @@ class GameViewController: UIViewController, UITableViewDelegate, UITableViewData
     var soruDegeriL = [Double]()
     
     var refreshControl = UIRefreshControl()
+    
+    var activityind : UIActivityIndicatorView = UIActivityIndicatorView()
      
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        getSoruAktiviteleri()
         
         NotificationCenter.default.addObserver(self, selector: #selector(self.refresh), name: NSNotification.Name(rawValue: "newDataNotif"), object: nil)
 
@@ -41,7 +45,7 @@ class GameViewController: UIViewController, UITableViewDelegate, UITableViewData
         refreshControl.addTarget(self, action: #selector(self.refreshTable(_:)), for: .valueChanged)
         tableView.addSubview(refreshControl) // not required when using UITableViewController
         
-        getSoruAktiviteleri()
+        activityIndCagir()
     }
     
     @objc func refresh() {
@@ -49,7 +53,7 @@ class GameViewController: UIViewController, UITableViewDelegate, UITableViewData
    }
     
     @objc func refreshTable(_ sender: AnyObject) {
-        refresh()
+        getSoruAktiviteleri()
         refreshControl.endRefreshing()
     }
     
@@ -63,20 +67,29 @@ class GameViewController: UIViewController, UITableViewDelegate, UITableViewData
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         selectedSoruId = soruIdArray[indexPath.row]
         self.performSegue(withIdentifier: "toSoruDetail", sender: nil)
+        
+        //let alert = UIAlertController(title: soruIdArray[indexPath.row], message: soruIdArray[indexPath.row], preferredStyle: .alert)
+        //alert.addAction(UIAlertAction(title: "OK", style: .default, handler: { (action) in
+        //}))
+
+        //self.present(alert, animated: true, completion: nil)
     }
     
     func getSorularFromParse() {
         let query = PFQuery(className: "Sorular")
         query.whereKey("objectId", notContainedIn: soruAktiviteleriID)
+        query.whereKey("Kabul", equalTo: true)
         makeAlert(titleInput: "Adet", messageInput: String(soruAktiviteleriID.count))
         query.findObjectsInBackground { (objects, error) in
             if error != nil {
                 self.makeAlert(titleInput: "Hata", messageInput: error?.localizedDescription ?? "Hata Kodu 1002!")
             } else {
                 
-                    self.soruIdArray.removeAll(keepingCapacity: false)
-                    self.soruNameArray.removeAll(keepingCapacity: false)
-                    
+                self.soruIdArray.removeAll(keepingCapacity: false)
+                self.soruNameArray.removeAll(keepingCapacity: false)
+                self.soruXPL.removeAll(keepingCapacity: false)
+                self.soruDegeriL.removeAll(keepingCapacity: false)
+                
                     if objects != nil {
                         for object in objects! {
                             if let soruid = object.objectId {
@@ -103,6 +116,7 @@ class GameViewController: UIViewController, UITableViewDelegate, UITableViewData
                     }
                         
                     self.tableView.reloadData()
+                    self.activityind.stopAnimating()
                 }
             }
         }
@@ -143,8 +157,13 @@ class GameViewController: UIViewController, UITableViewDelegate, UITableViewData
         return cell
     }
     
-    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return soruNameArray.count
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {        
+        if soruNameArray.count > 10 {
+            return 10
+        }
+        else {
+            return soruNameArray.count
+        }
     }
     
     func makeAlert(titleInput : String, messageInput: String) {
@@ -152,6 +171,16 @@ class GameViewController: UIViewController, UITableViewDelegate, UITableViewData
         let okButton = UIAlertAction(title: "OK", style: .default, handler: nil)
         alert.addAction(okButton)
         self.present(alert, animated: true, completion: nil)
+    }
+    
+    func activityIndCagir(){
+        activityind.center = self.view.center
+        activityind.hidesWhenStopped = true
+        activityind.style = UIActivityIndicatorView.Style.large
+        activityind.color = UIColor.black
+        self.view.addSubview(activityind)
+        activityind.startAnimating()
+    
     }
 
 }
