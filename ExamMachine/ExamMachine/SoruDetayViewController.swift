@@ -29,7 +29,8 @@ class SoruDetayViewController: UIViewController, GADRewardBasedVideoAdDelegate {
     var dogruCevap = ""
     var hakedisXP = 0.00
     var hakedisTL = 0.00
-    
+    var reklamGelmemeHatasi = ""
+    var reklamAktifmi = ""
     
     let user = PFUser.current()
     
@@ -45,6 +46,8 @@ class SoruDetayViewController: UIViewController, GADRewardBasedVideoAdDelegate {
         activityIndCagir()
         //self.view.backgroundColor = UIColor(patternImage: UIImage(named: "Back.png")!)
         getDataFromSorular()
+        
+        getAyarlar()
         
         
         GADRewardBasedVideoAd.sharedInstance().delegate = self
@@ -182,9 +185,16 @@ class SoruDetayViewController: UIViewController, GADRewardBasedVideoAdDelegate {
         alert.addAction(UIAlertAction(title: "OK", style: .default, handler: { (action) in
             
             if titleInput == "Tebrikler!"{
-                self.reklamGelsin()
+                if self.reklamAktifmi == "No" {
+                    self.useraPuanEkle(xp: self.hakedisXP, kazanc: self.hakedisTL)
+                    self.dismiss(animated: false, completion: nil)
+                    self.reloadd()
+                } else {
+                    self.reklamGelsin()
+                }
             } else if titleInput == "Bir hata oluştu!" {
-                return
+                self.dismiss(animated: false, completion: nil)
+                self.reloadd()                
             } else if titleInput == "Süre doldu" {
                 self.dismiss(animated: false, completion: nil)
                 self.reloadd()
@@ -216,7 +226,10 @@ class SoruDetayViewController: UIViewController, GADRewardBasedVideoAdDelegate {
         object["DogruCevap"] = dogruCevap
         object["HakedisXP"] = hakedisXP
         object["HakedisTL"] = hakedisTL
-        object["RefKodu"] = PFUser.current()!["Referansim"]
+        
+        if(PFUser.current()!["Referansim"] != nil){
+            object["RefKodu"] = PFUser.current()!["Referansim"]
+        }
         object.saveInBackground { (success, error) in
             if error != nil {
                 
@@ -271,7 +284,7 @@ class SoruDetayViewController: UIViewController, GADRewardBasedVideoAdDelegate {
         if GADRewardBasedVideoAd.sharedInstance().isReady == true {
               GADRewardBasedVideoAd.sharedInstance().present(fromRootViewController: self)
         } else {
-            makeAlert(titleInput: "Bir hata oluştu!", messageInput: "Tekrar çözebilir misiniz?")
+            makeAlert(titleInput: "Bir hata oluştu!", messageInput: reklamGelmemeHatasi)
             return
         }
     }
@@ -349,6 +362,40 @@ class SoruDetayViewController: UIViewController, GADRewardBasedVideoAdDelegate {
         activityind.color = UIColor.black
         self.view.addSubview(activityind)
         activityind.startAnimating()
+    }
+    
+    func getAyarlar(){
+        let any = "ReklamGelmemeHatasi"
+        let query = PFQuery(className: "Ayarlar")
+        query.whereKey("Konu", equalTo: any)
+        query.findObjectsInBackground { (objects, error) in
+            if error != nil {
+                self.makeAlert(titleInput: "Hata", messageInput: "Ayarlar yüklenirken hata oluştu.")
+            } else {
+                for object in objects! {
+                    if let metin = object.object(forKey: "Metin") as? String {
+                        self.reklamGelmemeHatasi = metin
+                    }
+
+                }
+            }
+        }
+        
+        let any2 = "ReklamlarAktifmi"
+        let query2 = PFQuery(className: "Ayarlar")
+        query2.whereKey("Konu", equalTo: any2)
+        query2.findObjectsInBackground { (objects, error) in
+            if error != nil {
+                self.makeAlert(titleInput: "Hata", messageInput: "Ayarlar yüklenirken hata oluştu.")
+            } else {
+                for object in objects! {
+                    if let metin = object.object(forKey: "Metin") as? String {
+                        self.reklamAktifmi = metin
+                    }
+
+                }
+            }
+        }
     }
     
 }

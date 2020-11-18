@@ -19,6 +19,8 @@ class GameViewController: UIViewController, UITableViewDelegate, UITableViewData
     var soruNameArray = [String]()
     var soruIdArray = [String]()
     
+    var userEnerji = 0.00
+    
     var soruAktiviteleriID = [String]()
     
     var selectedSoruId = ""
@@ -32,6 +34,7 @@ class GameViewController: UIViewController, UITableViewDelegate, UITableViewData
     override func viewDidLoad() {
         super.viewDidLoad()
         
+        getUserBilgileri()
         getSoruAktiviteleri()
         
         NotificationCenter.default.addObserver(self, selector: #selector(self.refresh), name: NSNotification.Name(rawValue: "newDataNotif"), object: nil)
@@ -65,8 +68,13 @@ class GameViewController: UIViewController, UITableViewDelegate, UITableViewData
     }
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        selectedSoruId = soruIdArray[indexPath.row]
-        self.performSegue(withIdentifier: "toSoruDetail", sender: nil)
+        if userEnerji <= 0 {
+            makeAlert(titleInput: "Enerjiniz tükendi", messageInput: "Saat başında devam edebilirsin :)")
+        } else {
+            selectedSoruId = soruIdArray[indexPath.row]
+            self.performSegue(withIdentifier: "toSoruDetail", sender: nil)
+        }
+
         
         //let alert = UIAlertController(title: soruIdArray[indexPath.row], message: soruIdArray[indexPath.row], preferredStyle: .alert)
         //alert.addAction(UIAlertAction(title: "OK", style: .default, handler: { (action) in
@@ -79,7 +87,7 @@ class GameViewController: UIViewController, UITableViewDelegate, UITableViewData
         let query = PFQuery(className: "Sorular")
         query.whereKey("objectId", notContainedIn: soruAktiviteleriID)
         query.whereKey("Kabul", equalTo: true)
-        makeAlert(titleInput: "Adet", messageInput: String(soruAktiviteleriID.count))
+        //makeAlert(titleInput: "Adet", messageInput: String(soruAktiviteleriID.count))
         query.findObjectsInBackground { (objects, error) in
             if error != nil {
                 self.makeAlert(titleInput: "Hata", messageInput: error?.localizedDescription ?? "Hata Kodu 1002!")
@@ -114,9 +122,26 @@ class GameViewController: UIViewController, UITableViewDelegate, UITableViewData
 
                             
                     }
-                        
+                    self.makeAlert(titleInput: "Başarılı", messageInput: "Sorular güncellendi")
                     self.tableView.reloadData()
                     self.activityind.stopAnimating()
+                }
+            }
+        }
+    }
+    
+    func getUserBilgileri(){
+        let currentUser = PFUser.current()
+        let query = PFQuery(className: "_User")
+        query.whereKey("objectId", equalTo: (currentUser?.objectId) ?? "0")
+        query.findObjectsInBackground { (objects, error) in
+            if error != nil {
+
+            } else {
+                for object in objects! {
+                    if let enerji_ = object.object(forKey: "Enerji") as? Double {
+                        self.userEnerji = enerji_
+                    }
                 }
             }
         }
@@ -139,7 +164,6 @@ class GameViewController: UIViewController, UITableViewDelegate, UITableViewData
                                 
                             }
                         }
-                        self.makeAlert(titleInput: "Başarılı", messageInput: "Sorular güncellendi")
                         self.getSorularFromParse()
                 }
             }
